@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+        }
+        .container { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header h1 span { color: #6c757d; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-actions a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a6cf7;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #eef1ff;
+            transition: background 0.2s;
+        }
+        .header-actions a:hover { background: #dde3ff; }
+        .header-actions .logout {
+            background: none;
+            color: #adb5bd;
+            padding: 8px;
+            font-size: 13px;
+        }
+        .header-actions .logout:hover { color: #e74c3c; background: none; }
+
+        .date-badge {
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 24px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .habit-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .habit-item {
+            background: white;
+            border-radius: 14px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.2s;
+        }
+        .habit-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .habit-left { display: flex; align-items: center; gap: 14px; }
+        .habit-name { font-size: 15px; font-weight: 500; }
+
+        .habit-check { 
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background: white;
+            flex-shrink: 0;
+        }
+        .habit-check.checked {
+            background: #4a6cf7;
+            border-color: #4a6cf7;
+        }
+        .habit-check.checked i { color: white; font-size: 13px; }
+        .habit-check:hover { border-color: #4a6cf7; }
+
+        .habit-actions { display: flex; gap: 8px; align-items: center; }
+        .habit-actions .comment-btn {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .habit-actions .comment-btn:hover { color: #4a6cf7; }
+        .habit-actions .comment-btn.has-comment { color: #4a6cf7; }
+
+        .habit-actions .delete-btn {
+            background: none;
+            border: none;
+            color: #dee2e6;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .habit-actions .delete-btn:hover { color: #e74c3c; }
+
+        .add-form {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .add-form input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .add-form input:focus { border-color: #4a6cf7; }
+        .add-form button {
+            padding: 12px 20px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .add-form button:hover { background: #2d2d4e; }
+
+        .comment-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .comment-modal.active { display: flex; }
+        .comment-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 340px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .comment-modal-content h3 { font-size: 16px; margin-bottom: 12px; }
+        .comment-modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            outline: none;
+        }
+        .comment-modal-content textarea:focus { border-color: #4a6cf7; }
+        .comment-modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            justify-content: flex-end;
+        }
+        .comment-modal-actions button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .comment-modal-actions .save-btn { background: #4a6cf7; color: white; }
+        .comment-modal-actions .save-btn:hover { background: #3b5de7; }
+        .comment-modal-actions .cancel-btn { background: #f1f3f5; color: #495057; }
+
+        .streak-badge {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: 8px;
+        }
+        .streak-badge i { color: #f59e0b; margin-right: 2px; }
+
+        @media (max-width: 480px) {
+            .container { padding: 20px 16px; }
+            .header h1 { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>habit<span> tracker</span></h1>
+            <div class="header-actions">
+                <a href="{{ url_for('dashboard') }}"><i class="fas fa-chart-simple"></i> Dashboard</a>
+                <a href="{{ url_for('history') }}"><i class="fas fa-clock-rotate-left"></i> History</a>
+                <a href="{{ url_for('logout') }}" class="logout"><i class="fas fa-right-from-bracket"></i></a>
+            </div>
+        </div>
+
+        <div class="date-badge">
+            <i class="far fa-calendar"></i> {{ today }}
+        </div>
+
+        {% if habits %}
+        <div class="habit-list">
+            {% for h in habits %}
+            <div class="habit-item" id="habit-{{ h.id }}">
+                <div class="habit-left">
+                    <div class="habit-check {{ 'checked' if h.checked }}" 
+                         onclick="toggleHabit({{ h.id }}, '{{ h.name }}')">
+                        {% if h.checked %}<i class="fas fa-check"></i>{% endif %}
+                    </div>
+                    <span class="habit-name">{{ h.name }}</span>
+                    <span class="streak-badge" id="streak-{{ h.id }}"></span>
+                </div>
+                <div class="habit-actions">
+                    {% if h.name == 'Exercise' %}
+                    <button class="comment-btn" onclick="openComment({{ h.id }}, '{{ today }}')" title="Add notes">
+                        <i class="far fa-note-sticky"></i>
+                    </button>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('delete_habit', habit_id=h.id) }}" style="display:inline" onsubmit="return confirm('Delete this habit? All logs will be removed.')">
+                        <button class="delete-btn" type="submit"><i class="fas fa-xmark"></i></button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:60px 20px;color:#adb5bd;">
+            <i class="far fa-face-smile" style="font-size:40px;margin-bottom:12px;display:block;"></i>
+            <p style="font-size:14px;">No habits yet. Add one below!</p>
+        </div>
+        {% endif %}
+
+        <form class="add-form" method="POST" action="{{ url_for('add_habit') }}">
+            <input type="text" name="name" placeholder="New habit..." required maxlength="50">
+            <button type="submit">Add</button>
+        </form>
+    </div>
+
+    <!-- Comment Modal -->
+    <div class="comment-modal" id="commentModal">
+        <div class="comment-modal-content">
+            <h3><i class="far fa-note-sticky"></i> Exercise notes</h3>
+            <textarea id="commentText" placeholder="What did you do today? e.g. 30min run, push-ups..."></textarea>
+            <div class="comment-modal-actions">
+                <button class="cancel-btn" onclick="closeComment()">Cancel</button>
+                <button class="save-btn" onclick="saveComment()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let commentHabitId = null;
+        let commentDate = null;
+
+        function toggleHabit(habitId, name) {
+            const check = document.querySelector(`#habit-${habitId} .habit-check`);
+            const wasChecked = check.classList.contains('checked');
+
+            fetch('/toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({habit_id: habitId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.done) {
+                    check.classList.add('checked');
+                    check.innerHTML = '<i class="fas fa-check"></i>';
+                    if (name === 'Exercise') {
+                        openComment(habitId, new Date().toISOString().split('T')[0]);
+                    }
+                } else {
+                    check.classList.remove('checked');
+                    check.innerHTML = '';
+                }
+                if (!data.done && name === 'Exercise') {
+                    // also clear the comment
+                    fetch('/toggle', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({habit_id: habitId, date: new Date().toISOString().split('T')[0], comment: ''})
+                    });
+                }
+                loadStreaks();
+            });
+        }
+
+        function openComment(habitId, dateStr) {
+            commentHabitId = habitId;
+            commentDate = dateStr;
+            // fetch existing comment
+            fetch(`/toggle`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({habit_id: habitId, date: dateStr})
+            })
+            .catch(() => {});
+            document.getElementById('commentText').value = '';
+            document.getElementById('commentModal').classList.add('active');
+        }
+
+        function closeComment() {
+            document.getElementById('commentModal').classList.remove('active');
+            commentHabitId = null;
+        }
+
+        function saveComment() {
+            const comment = document.getElementById('commentText').value;
+            fetch('/edit_comment/' + commentHabitId + '/' + commentDate, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'comment=' + encodeURIComponent(comment)
+            }).then(() => closeComment());
+        }
+
+        function loadStreaks() {
+            fetch('/dashboard_data')
+            .then(r => r.json())
+            .then(data => {
+                data.forEach(h => {
+                    const el = document.getElementById('streak-' + h.id);
+                    if (el) {
+                        if (h.current_streak > 1) {
+                            el.innerHTML = '<i class="fas fa-fire"></i> ' + h.current_streak;
+                        } else if (h.current_streak === 1) {
+                            el.innerHTML = '<i class="fas fa-fire"></i> 1 day';
+                        }
+                    }
+                });
+            });
+        }
+
+        loadStreaks();
+    </script>
+</body>
+</html>
