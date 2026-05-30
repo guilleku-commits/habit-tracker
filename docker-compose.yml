@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - habit-data:/app/data
+    environment:
+      - DB_PATH=/app/data/habits.db
+    restart: unless-stopped
+
+volumes:
+  habit-data:
