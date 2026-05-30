@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History — Habit Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+        }
+        .container { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a6cf7;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #eef1ff;
+            transition: background 0.2s;
+        }
+        .header a:hover { background: #dde3ff; }
+
+        .log-list { display: flex; flex-direction: column; gap: 8px; }
+        .log-item {
+            background: white;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .log-left { display: flex; align-items: center; gap: 12px; }
+        .log-date { font-size: 13px; color: #adb5bd; min-width: 90px; }
+        .log-name { font-size: 14px; font-weight: 500; }
+        .log-comment {
+            font-size: 13px;
+            color: #6c757d;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #adb5bd;
+        }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; }
+        .badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: #eef1ff;
+            color: #4a6cf7;
+        }
+        .log-comment-edit textarea {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            width: 200px;
+            resize: vertical;
+            outline: none;
+        }
+        .log-comment-edit textarea:focus { border-color: #4a6cf7; }
+        .log-comment-edit button {
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            background: #4a6cf7;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-clock-rotate-left"></i> history</h1>
+            <a href="{{ url_for('index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+
+        {% if logs %}
+        <div class="log-list">
+            {% for log in logs %}
+            <div class="log-item">
+                <div class="log-left">
+                    <span class="log-date">{{ log.date }}</span>
+                    <span class="log-name">{{ log.name }}</span>
+                    {% if log.comment %}
+                    <span class="log-comment">— {{ log.comment }}</span>
+                    {% endif %}
+                </div>
+                {% if log.name == 'Exercise' %}
+                <span class="badge">edit</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="far fa-clock"></i>
+            <p>No check-ins yet. Start tracking!</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
