@@ -346,6 +346,95 @@
         </form>
     </div>
 
+    <!-- Weight Input -->
+    <div class="container" style="padding-top:0;">
+        <div class="weight-card" id="weightCard">
+            <div class="weight-header">
+                <span><i class="fas fa-weight-scale"></i> Weight</span>
+                <a href="{{ url_for('dashboard') }}#weight-chart" class="weight-chart-link"><i class="fas fa-chart-line"></i></a>
+            </div>
+            <div class="weight-input-row">
+                <input type="number" id="weightInput" class="weight-input" step="0.1" placeholder="--.-" min="30" max="250">
+                <span class="weight-unit">kg</span>
+                <button class="weight-save-btn" id="weightSaveBtn" onclick="saveWeight()">Save</button>
+            </div>
+            <div class="weight-meta" id="weightMeta"></div>
+        </div>
+    </div>
+
+    <style>
+        .weight-card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-top: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .weight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .weight-header i { color: #4a6cf7; margin-right: 6px; }
+        .weight-chart-link {
+            font-size: 13px;
+            color: #4a6cf7;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: #eef1ff;
+        }
+        .weight-chart-link:hover { background: #dde3ff; }
+        .weight-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .weight-input {
+            width: 100px;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .weight-input:focus { border-color: #4a6cf7; }
+        .weight-input::placeholder { color: #ced4da; font-weight: 400; font-size: 20px; }
+        .weight-unit {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .weight-save-btn {
+            padding: 10px 20px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-left: auto;
+        }
+        .weight-save-btn:hover { background: #2d2d4e; }
+        .weight-save-btn.saved { background: #10b981; }
+        .weight-meta {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 6px;
+            min-height: 18px;
+        }
+    </style>
+
     <!-- Comment Modal -->
     <div class="comment-modal" id="commentModal">
         <div class="comment-modal-content">
@@ -444,6 +533,55 @@
         }
 
         loadStreaks();
+
+        // ── Weight functions ──
+        function loadWeight() {
+            const dateStr = getCurrentDate();
+            fetch('/get_weight?date=' + dateStr)
+            .then(r => r.json())
+            .then(data => {
+                if (data.weight) {
+                    document.getElementById('weightInput').value = data.weight;
+                    document.getElementById('weightSaveBtn').textContent = 'Saved ✓';
+                    document.getElementById('weightSaveBtn').classList.add('saved');
+                    document.getElementById('weightMeta').textContent = 'Logged for ' + dateStr;
+                } else {
+                    document.getElementById('weightInput').value = '';
+                    document.getElementById('weightSaveBtn').textContent = 'Save';
+                    document.getElementById('weightSaveBtn').classList.remove('saved');
+                    document.getElementById('weightMeta').textContent = '';
+                }
+            });
+        }
+
+        function saveWeight() {
+            const weight = document.getElementById('weightInput').value;
+            if (!weight || weight < 30 || weight > 250) {
+                document.getElementById('weightInput').focus();
+                return;
+            }
+            const dateStr = getCurrentDate();
+            fetch('/save_weight', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({weight: parseFloat(weight), date: dateStr})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.saved) {
+                    document.getElementById('weightSaveBtn').textContent = 'Saved ✓';
+                    document.getElementById('weightSaveBtn').classList.add('saved');
+                    document.getElementById('weightMeta').textContent = 'Logged for ' + dateStr;
+                }
+            });
+        }
+
+        // Allow Enter to save weight
+        document.getElementById('weightInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') saveWeight();
+        });
+
+        loadWeight();
     </script>
 </body>
 </html>
