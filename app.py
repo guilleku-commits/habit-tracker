@@ -46,6 +46,14 @@ def init_db():
             value TEXT NOT NULL
         )
     ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS weight_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL UNIQUE,
+            weight REAL NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
     # Seed habits
     seeds = [
         ('No alcohol', 1),
@@ -331,7 +339,12 @@ def export_data(fmt):
             'exported_at': datetime.utcnow().isoformat(),
             'habits': [{'id': h['id'], 'name': h['name'], 'created_at': h['created_at']} for h in habits],
             'logs': [{'date': r['date'], 'habit': r['habit_name'], 'comment': r['comment'], 'created_at': r['created_at']} for r in logs],
+            'weight_logs': [],
         }
+        conn = get_db()
+        weight_rows = conn.execute('SELECT date, weight FROM weight_log ORDER BY date').fetchall()
+        conn.close()
+        data['weight_logs'] = [{'date': r['date'], 'weight': r['weight']} for r in weight_rows]
         return jsonify(data), 200, {'Content-Disposition': 'attachment; filename=habit-tracker-export.json'}
 
     elif fmt == 'csv':
@@ -341,6 +354,16 @@ def export_data(fmt):
         writer.writerow(['Date', 'Habit', 'Comment', 'Created At'])
         for r in logs:
             writer.writerow([r['date'], r['habit_name'], r['comment'], r['created_at']])
+
+        # Add weight section
+        writer.writerow([])
+        writer.writerow(['WEIGHT LOG'])
+        writer.writerow(['Date', 'Weight (kg)'])
+        conn = get_db()
+        weight_rows = conn.execute('SELECT date, weight FROM weight_log ORDER BY date').fetchall()
+        conn.close()
+        for r in weight_rows:
+            writer.writerow([r['date'], r['weight']])
         csv_str = output.getvalue()
         return (csv_str, 200, {
             'Content-Type': 'text/csv',
@@ -348,6 +371,46 @@ def export_data(fmt):
         })
 
     return 'Invalid format', 400
+
+@app.route('/save_weight', methods=['POST'])
+@require_auth
+def save_weight():
+    data = request.get_json()
+    date_str = data.get('date', date.today().isoformat())
+    weight = data.get('weight')
+    if weight is None:
+        return jsonify({'error': 'No weight provided'}), 400
+    now = datetime.utcnow().isoformat()
+    conn = get_db()
+    conn.execute(
+        '''INSERT INTO weight_log (date, weight, created_at)
+           VALUES (?, ?, ?)
+           ON CONFLICT(date) DO UPDATE SET weight=excluded.weight, created_at=excluded.created_at''',
+        (date_str, float(weight), now)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'saved': True, 'weight': float(weight)})
+
+@app.route('/get_weight')
+@require_auth
+def get_weight():
+    date_str = request.args.get('date', date.today().isoformat())
+    conn = get_db()
+    row = conn.execute('SELECT weight FROM weight_log WHERE date=?', (date_str,)).fetchone()
+    conn.close()
+    return jsonify({'weight': row['weight'] if row else None})
+
+@app.route('/weight_data')
+@require_auth
+def weight_data():
+    days = request.args.get('days', 30, type=int)
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT date, weight FROM weight_log ORDER BY date DESC LIMIT ?', (days,)
+    ).fetchall()
+    conn.close()
+    return jsonify([{'date': r['date'], 'weight': r['weight']} for r in reversed(rows)])
 
 @app.route('/edit_comment/<int:habit_id>/<date_str>', methods=['POST'])
 @require_auth
