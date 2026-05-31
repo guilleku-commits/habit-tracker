@@ -19,7 +19,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
+            margin-bottom: 20px;
         }
         .header h1 { font-size: 22px; font-weight: 700; }
         .header h1 span { color: #6c757d; }
@@ -43,15 +43,50 @@
         }
         .header-actions .logout:hover { color: #e74c3c; background: none; }
 
-        .date-badge {
-            text-align: center;
-            font-size: 14px;
-            color: #6c757d;
-            margin-bottom: 24px;
+        /* Day navigation */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
             background: white;
-            padding: 10px;
+            padding: 12px 16px;
             border-radius: 12px;
+            margin-bottom: 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .date-nav .nav-btn {
+            background: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: #4a6cf7;
+            font-size: 14px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .date-nav .nav-btn:hover { background: #eef1ff; border-color: #4a6cf7; }
+        .date-nav .nav-btn.disabled {
+            color: #dee2e6;
+            border-color: #e9ecef;
+            pointer-events: none;
+        }
+        .date-nav .date-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+            min-width: 130px;
+            text-align: center;
+        }
+        .date-nav .date-label .today-tag {
+            font-size: 10px;
+            font-weight: 500;
+            color: #4a6cf7;
+            background: #eef1ff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
         }
 
         .habit-list { display: flex; flex-direction: column; gap: 10px; }
@@ -67,7 +102,7 @@
             transition: all 0.2s;
         }
         .habit-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .habit-left { display: flex; align-items: center; gap: 14px; }
+        .habit-left { display: flex; align-items: center; gap: 14px; flex: 1; }
         .habit-name { font-size: 15px; font-weight: 500; }
 
         .habit-check { 
@@ -197,6 +232,40 @@
         }
         .streak-badge i { color: #f59e0b; margin-right: 2px; }
 
+        .comment-preview {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+            margin-left: 42px;
+        }
+
+        /* Export dropdown */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            min-width: 140px;
+            z-index: 50;
+            overflow: hidden;
+        }
+        .dropdown-menu.show { display: block; }
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #1a1a2e;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .dropdown-menu a:hover { background: #f8f9fa; }
+        .dropdown-menu a i { width: 18px; color: #4a6cf7; }
+        .dropdown-toggle { cursor: pointer; }
+
         @media (max-width: 480px) {
             .container { padding: 20px 16px; }
             .header h1 { font-size: 18px; }
@@ -208,14 +277,31 @@
         <div class="header">
             <h1>habit<span> tracker</span></h1>
             <div class="header-actions">
-                <a href="{{ url_for('dashboard') }}"><i class="fas fa-chart-simple"></i> Dashboard</a>
-                <a href="{{ url_for('history') }}"><i class="fas fa-clock-rotate-left"></i> History</a>
+                <a href="{{ url_for('dashboard') }}"><i class="fas fa-chart-simple"></i></a>
+                <a href="{{ url_for('history') }}"><i class="fas fa-clock-rotate-left"></i></a>
+                <div class="dropdown">
+                    <a class="dropdown-toggle" onclick="toggleExport()"><i class="fas fa-download"></i></a>
+                    <div class="dropdown-menu" id="exportMenu">
+                        <a href="{{ url_for('export_data', fmt='csv') }}"><i class="fas fa-file-csv"></i> Export CSV</a>
+                        <a href="{{ url_for('export_data', fmt='json') }}"><i class="fas fa-file-code"></i> Export JSON</a>
+                    </div>
+                </div>
                 <a href="{{ url_for('logout') }}" class="logout"><i class="fas fa-right-from-bracket"></i></a>
             </div>
         </div>
 
-        <div class="date-badge">
-            <i class="far fa-calendar"></i> {{ today }}
+        <!-- Day Navigation -->
+        <div class="date-nav">
+            <a href="?date={{ prev_date }}" class="nav-btn"><i class="fas fa-chevron-left"></i> Prev</a>
+            <div class="date-label">
+                {{ today }}
+                {% if is_today %}<span class="today-tag">Today</span>{% endif %}
+            </div>
+            {% if not is_today %}
+            <a href="?" class="nav-btn">Next <i class="fas fa-chevron-right"></i></a>
+            {% else %}
+            <span class="nav-btn disabled">Next <i class="fas fa-chevron-right"></i></span>
+            {% endif %}
         </div>
 
         {% if habits %}
@@ -227,20 +313,23 @@
                          onclick="toggleHabit({{ h.id }}, '{{ h.name }}')">
                         {% if h.checked %}<i class="fas fa-check"></i>{% endif %}
                     </div>
-                    <span class="habit-name">{{ h.name }}</span>
-                    <span class="streak-badge" id="streak-{{ h.id }}"></span>
+                    <div>
+                        <span class="habit-name">{{ h.name }}</span>
+                        <span class="streak-badge" id="streak-{{ h.id }}"></span>
+                    </div>
                 </div>
                 <div class="habit-actions">
-                    {% if h.name == 'Exercise' %}
                     <button class="comment-btn" onclick="openComment({{ h.id }}, '{{ today }}')" title="Add notes">
                         <i class="far fa-note-sticky"></i>
                     </button>
-                    {% endif %}
-                    <form method="POST" action="{{ url_for('delete_habit', habit_id=h.id) }}" style="display:inline" onsubmit="return confirm('Delete this habit? All logs will be removed.')">
+                    <form method="POST" action="{{ url_for('delete_habit', habit_id=h.id) }}" style="display:inline" onsubmit="return confirm('Delete this habit and all its logs?')">
                         <button class="delete-btn" type="submit"><i class="fas fa-xmark"></i></button>
                     </form>
                 </div>
             </div>
+            {% if h.comment %}
+            <div class="comment-preview"><i class="far fa-note-sticky" style="color:#4a6cf7;margin-right:4px;"></i>{{ h.comment }}</div>
+            {% endif %}
             {% endfor %}
         </div>
         {% else %}
@@ -272,14 +361,30 @@
         let commentHabitId = null;
         let commentDate = null;
 
+        function toggleExport() {
+            document.getElementById('exportMenu').classList.toggle('show');
+        }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.getElementById('exportMenu').classList.remove('show');
+            }
+        });
+
+        // Get current date from URL parameter
+        function getCurrentDate() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('date') || new Date().toISOString().split('T')[0];
+        }
+
         function toggleHabit(habitId, name) {
             const check = document.querySelector(`#habit-${habitId} .habit-check`);
             const wasChecked = check.classList.contains('checked');
+            const dateStr = getCurrentDate();
 
             fetch('/toggle', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({habit_id: habitId})
+                body: JSON.stringify({habit_id: habitId, date: dateStr})
             })
             .then(r => r.json())
             .then(data => {
@@ -287,34 +392,20 @@
                     check.classList.add('checked');
                     check.innerHTML = '<i class="fas fa-check"></i>';
                     if (name === 'Exercise') {
-                        openComment(habitId, new Date().toISOString().split('T')[0]);
+                        openComment(habitId, dateStr);
                     }
                 } else {
                     check.classList.remove('checked');
                     check.innerHTML = '';
                 }
-                if (!data.done && name === 'Exercise') {
-                    // also clear the comment
-                    fetch('/toggle', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({habit_id: habitId, date: new Date().toISOString().split('T')[0], comment: ''})
-                    });
-                }
                 loadStreaks();
+                location.reload();
             });
         }
 
         function openComment(habitId, dateStr) {
             commentHabitId = habitId;
             commentDate = dateStr;
-            // fetch existing comment
-            fetch(`/toggle`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({habit_id: habitId, date: dateStr})
-            })
-            .catch(() => {});
             document.getElementById('commentText').value = '';
             document.getElementById('commentModal').classList.add('active');
         }
@@ -330,7 +421,10 @@
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: 'comment=' + encodeURIComponent(comment)
-            }).then(() => closeComment());
+            }).then(() => {
+                closeComment();
+                location.reload();
+            });
         }
 
         function loadStreaks() {
@@ -340,10 +434,8 @@
                 data.forEach(h => {
                     const el = document.getElementById('streak-' + h.id);
                     if (el) {
-                        if (h.current_streak > 1) {
-                            el.innerHTML = '<i class="fas fa-fire"></i> ' + h.current_streak;
-                        } else if (h.current_streak === 1) {
-                            el.innerHTML = '<i class="fas fa-fire"></i> 1 day';
+                        if (h.current_streak > 0) {
+                            el.innerHTML = '<i class="fas fa-fire"></i> ' + h.current_streak + (h.current_streak === 1 ? ' day' : '');
                         }
                     }
                 });
