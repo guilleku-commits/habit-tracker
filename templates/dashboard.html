@@ -179,5 +179,93 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Weight Chart -->
+    <div class="container" style="padding-top:0;">
+        <div class="stat-card" id="weight-chart">
+            <h3><i class="fas fa-weight-scale"></i> Weight Trend</h3>
+            <div class="subtitle">Last 60 days</div>
+            <div class="chart-wrapper" style="height:250px;">
+                <canvas id="weightChart"></canvas>
+            </div>
+            <div style="text-align:center;margin-top:8px;font-size:12px;color:#6c757d;" id="weightStats"></div>
+        </div>
+    </div>
+
+    <script>
+        fetch('/weight_data?days=60')
+        .then(r => r.json())
+        .then(data => {
+            if (data.length === 0) {
+                document.getElementById('weight-chart').querySelector('.chart-wrapper').innerHTML =
+                    '<div style="text-align:center;padding:60px 0;color:#adb5bd;font-size:14px;">No weight data yet. Log it from the main page.</div>';
+                return;
+            }
+            const labels = data.map(d => d.date.slice(5));
+            const values = data.map(d => d.weight);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const latest = values[values.length - 1];
+            const first = values[0];
+            const change = (latest - first).toFixed(1);
+            const changeClass = change > 0 ? 'color:#e74c3c;' : 'color:#10b981;';
+            document.getElementById('weightStats').innerHTML =
+                'Latest: <strong>' + latest + '</strong> kg &nbsp;·&nbsp; Start: <strong>' + first +
+                '</strong> kg &nbsp;·&nbsp; Change: <span style="' + changeClass + 'font-weight:700;">' +
+                (change > 0 ? '+' : '') + change + '</span> kg';
+
+            const padding = (max - min) * 0.15 || 2;
+            new Chart(document.getElementById('weightChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data: values,
+                        borderColor: '#4a6cf7',
+                        backgroundColor: 'rgba(74, 108, 247, 0.08)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4a6cf7',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ctx.parsed.y + ' kg'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: Math.floor(min - padding),
+                            max: Math.ceil(max + padding),
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#adb5bd',
+                                callback: function(v) { return v + ' kg'; }
+                            },
+                            grid: { color: '#f1f3f5' }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 10 },
+                                color: '#adb5bd',
+                                maxTicksLimit: 12,
+                            },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
