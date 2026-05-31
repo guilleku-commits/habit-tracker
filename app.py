@@ -97,17 +97,26 @@ def logout():
 @app.route('/')
 @require_auth
 def index():
+    # Day navigation — /?date=2026-05-30 or default today
+    date_str = request.args.get('date', date.today().isoformat())
+    try:
+        view_date = date.fromisoformat(date_str)
+    except ValueError:
+        view_date = date.today()
+        date_str = view_date.isoformat()
+
     conn = get_db()
     habits = conn.execute('SELECT * FROM habits WHERE active=1 ORDER BY id').fetchall()
     conn.close()
 
-    today = date.today().isoformat()
     logged_ids = set()
     conn = get_db()
-    rows = conn.execute("SELECT habit_id FROM log WHERE date=?", (today,)).fetchall()
-    conn.close()
+    rows = conn.execute("SELECT habit_id FROM log WHERE date=?", (date_str,)).fetchall()
+    comments_map = {}
     for r in rows:
         logged_ids.add(r['habit_id'])
+        comments_map[r['habit_id']] = r['comment']
+    conn.close()
 
     habits_list = []
     for h in habits:
@@ -115,9 +124,19 @@ def index():
             'id': h['id'],
             'name': h['name'],
             'checked': h['id'] in logged_ids,
+            'comment': comments_map.get(h['id'], ''),
         })
 
-    return render_template('index.html', habits=habits_list, today=today)
+    prev_date = (view_date - timedelta(days=1)).isoformat()
+    next_date = (view_date + timedelta(days=1)).isoformat()
+    is_today = date_str == date.today().isoformat()
+
+    return render_template('index.html',
+        habits=habits_list,
+        today=date_str,
+        prev_date=prev_date,
+        next_date=next_date,
+        is_today=is_today)
 
 @app.route('/toggle', methods=['POST'])
 @require_auth
@@ -292,6 +311,43 @@ def history():
     ''').fetchall()
     conn.close()
     return render_template('history.html', logs=logs, habits=habits)
+
+@app.route('/export/<fmt>')
+@require_auth
+def export_data(fmt):
+    conn = get_db()
+    habits = conn.execute('SELECT * FROM habits WHERE active=1 ORDER BY id').fetchall()
+    logs = conn.execute('''
+        SELECT l.date, l.comment, l.created_at, h.name as habit_name
+        FROM log l
+        JOIN habits h ON h.id = l.habit_id
+        WHERE h.active=1
+        ORDER BY l.date DESC, h.name
+    ''').fetchall()
+    conn.close()
+
+    if fmt == 'json':
+        data = {
+            'exported_at': datetime.utcnow().isoformat(),
+            'habits': [{'id': h['id'], 'name': h['name'], 'created_at': h['created_at']} for h in habits],
+            'logs': [{'date': r['date'], 'habit': r['habit_name'], 'comment': r['comment'], 'created_at': r['created_at']} for r in logs],
+        }
+        return jsonify(data), 200, {'Content-Disposition': 'attachment; filename=habit-tracker-export.json'}
+
+    elif fmt == 'csv':
+        import csv, io
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Date', 'Habit', 'Comment', 'Created At'])
+        for r in logs:
+            writer.writerow([r['date'], r['habit_name'], r['comment'], r['created_at']])
+        csv_str = output.getvalue()
+        return (csv_str, 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': 'attachment; filename=habit-tracker-export.csv'
+        })
+
+    return 'Invalid format', 400
 
 @app.route('/edit_comment/<int:habit_id>/<date_str>', methods=['POST'])
 @require_auth
